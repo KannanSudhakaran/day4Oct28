@@ -13,6 +13,8 @@ cd frontend && npm install && npm run dev            # http://localhost:5173
 ```
 Auth: `POST /api/auth/register`, `POST /api/auth/login` (returns a JWT), `GET /api/auth/me`. All customer and agent endpoints require `Authorization: Bearer <token>` and only touch the logged-in user's customers (other users' ids return 404). In Swagger: log in, click Authorize, paste the token. Customer and agent endpoints are sales-only (admin tokens get 403).
 
+Export: `GET /api/customers/export[?name=]` downloads the logged-in user's customers as `customers-YYYY-MM-DD.xlsx` (sales only; the frontend has an "Export to Excel" button that passes the current search text, which the endpoint matches against the name only).
+
 Admin: `POST /api/admin/login` and `GET /api/admin/users` (sales users with their customer counts, optional `?q=`). The default admin is `admin@admin.com` / `123456789` (seeded by `002_admin.sql`); replace its password hash on any shared deployment. In the frontend use the "Admin sign in" link on the login screen to reach the dashboard.
 
 Endpoints: `GET/POST /api/customers`, `GET/PUT/DELETE /api/customers/:id`, `POST /api/agent {message, history}`.

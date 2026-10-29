@@ -7,6 +7,7 @@ const agent = require('./agent');
 const users = require('./userService');
 const bcrypt = require('bcryptjs');
 const admin = require('./adminService');
+const exportService = require('./exportService');
 const { signToken, requireAuth, requireSales, requireAdmin } = require('./auth');
 
 const app = express();
@@ -91,6 +92,18 @@ app.use(['/api/customers', '/api/agent'], requireAuth, requireSales);
 app.get('/api/customers', wrap(async (req, res) => {
   const uid = req.user.user_id;
   res.json(req.query.name ? await customers.searchByName(uid, req.query.name) : await customers.getAll(uid));
+}));
+
+// Must stay above /api/customers/:id so "export" is not parsed as an id.
+app.get('/api/customers/export', wrap(async (req, res) => {
+  const uid = req.user.user_id; // from the token only; query params never choose the owner
+  const rows = req.query.name ? await customers.searchByName(uid, String(req.query.name)) : await customers.getAll(uid);
+  res.set({
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'Content-Disposition': `attachment; filename="${exportService.exportFileName()}"`,
+    'Access-Control-Expose-Headers': 'Content-Disposition',
+  });
+  res.send(await exportService.buildCustomersWorkbook(rows));
 }));
 
 app.get('/api/customers/:id', wrap(async (req, res) => {

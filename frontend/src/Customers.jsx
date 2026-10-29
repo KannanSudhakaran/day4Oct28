@@ -8,6 +8,7 @@ export default function Customers({ refreshKey }) {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(null); // null | 'new' | customer
+  const [exporting, setExporting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -47,6 +48,24 @@ export default function Customers({ refreshKey }) {
     }
   };
 
+  const exportExcel = async () => {
+    setExporting(true);
+    setError('');
+    try {
+      const { blob, filename } = await api.exportCustomers(query.trim());
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <section className="card">
       <div className="card-head">
@@ -61,6 +80,9 @@ export default function Customers({ refreshKey }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          <button className="btn ghost" onClick={exportExcel} disabled={exporting}>
+            {exporting ? 'Exporting…' : 'Export to Excel'}
+          </button>
           <button className="btn primary" onClick={() => setEditing('new')}>+ Add customer</button>
         </div>
       </div>
