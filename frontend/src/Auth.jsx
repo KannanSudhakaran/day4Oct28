@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { api, setToken } from './api';
+import AdminLogin from './AdminLogin';
 
 export default function Auth({ onAuthed }) {
-  const [mode, setMode] = useState('login'); // 'login' | 'register'
+  const [mode, setMode] = useState('login'); // 'login' | 'register' | 'admin'
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -27,6 +28,8 @@ export default function Auth({ onAuthed }) {
     }
   };
 
+  if (mode === 'admin') return <AdminLogin onAuthed={onAuthed} onBack={() => setMode('login')} />;
+
   return (
     <div className="modal-backdrop">
       <form className="modal" onSubmit={submit}>
@@ -40,6 +43,7 @@ export default function Auth({ onAuthed }) {
           <input type="password" value={form.password} onChange={set('password')} minLength={8} required />
         </label>
         {error && <p className="error">{error}</p>}
+        <p className="muted"><a href="#admin" onClick={(e) => { e.preventDefault(); setMode('admin'); }}>Admin sign in</a></p>
         <div className="modal-actions">
           <button
             type="button"

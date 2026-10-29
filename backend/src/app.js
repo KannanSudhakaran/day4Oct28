@@ -6,7 +6,8 @@ const customers = require('./customerService');
 const agent = require('./agent');
 const users = require('./userService');
 const bcrypt = require('bcryptjs');
-const { signToken, requireAuth } = require('./auth');
+const admin = require('./adminService');
+const { signToken, requireAuth, requireSales, requireAdmin } = require('./auth');
 
 const app = express();
 
@@ -60,24 +61,32 @@ app.post('/api/auth/register', wrap(async (req, res) => {
   res.status(201).json(await users.create({ name: name.trim(), email: email.trim(), password }));
 }));
 
-app.post('/api/auth/login', wrap(async (req, res) => {
+// Sales and admin logins share this check; an account of the other role gets the same generic 401.
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
+const login = (role) => wrap(async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'email and password are required' });
   const u = await users.findByEmail(String(email));
-  if (!u || !(await bcrypt.compare(String(password), u.password_hash))) {
-    return res.status(401).json({ error: 'Invalid email or password' });
-  }
+  const valid = await bcrypt.compare(String(password), u ? u.password_hash : DUMMY_HASH);
+  if (!u || !valid || u.role !== role) return res.status(401).json({ error: 'Invalid email or password' });
   const { password_hash, ...user } = u;
   res.json({ token: signToken(user), user });
-}));
+});
+
+app.post('/api/auth/login', login('sales'));
+app.post('/api/admin/login', login('admin'));
 
 app.get('/api/auth/me', requireAuth, wrap(async (req, res) => {
   const u = await users.getById(req.user.user_id);
   u ? res.json(u) : res.status(401).json({ error: 'User no longer exists' });
 }));
 
-// Everything below requires a valid token; handlers scope data to req.user
-app.use(['/api/customers', '/api/agent'], requireAuth);
+app.get('/api/admin/users', requireAuth, requireAdmin, wrap(async (req, res) => {
+  res.json(await admin.listSalesUsers({ q: req.query.q }));
+}));
+
+// Customer data and the agent are sales-only; handlers scope data to req.user
+app.use(['/api/customers', '/api/agent'], requireAuth, requireSales);
 
 app.get('/api/customers', wrap(async (req, res) => {
   const uid = req.user.user_id;

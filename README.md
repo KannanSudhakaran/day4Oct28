@@ -7,10 +7,13 @@
 ```
 cd backend  && npm install && cp .env.example .env   # set DATABASE_URL, ANTHROPIC_API_KEY, JWT_SECRET
 psql "$DATABASE_URL" -f sql/001_auth.sql              # one-time: users table + customer.sales_user_id
+psql "$DATABASE_URL" -f sql/002_admin.sql             # one-time: admin role + default admin user
 npm start        # http://localhost:4000/swagger
 cd frontend && npm install && npm run dev            # http://localhost:5173
 ```
-Auth: `POST /api/auth/register`, `POST /api/auth/login` (returns a JWT), `GET /api/auth/me`. All customer and agent endpoints require `Authorization: Bearer <token>` and only touch the logged-in user's customers (other users' ids return 404). In Swagger: log in, click Authorize, paste the token.
+Auth: `POST /api/auth/register`, `POST /api/auth/login` (returns a JWT), `GET /api/auth/me`. All customer and agent endpoints require `Authorization: Bearer <token>` and only touch the logged-in user's customers (other users' ids return 404). In Swagger: log in, click Authorize, paste the token. Customer and agent endpoints are sales-only (admin tokens get 403).
+
+Admin: `POST /api/admin/login` and `GET /api/admin/users` (sales users with their customer counts, optional `?q=`). The default admin is `admin@admin.com` / `123456789` (seeded by `002_admin.sql`); replace its password hash on any shared deployment. In the frontend use the "Admin sign in" link on the login screen to reach the dashboard.
 
 Endpoints: `GET/POST /api/customers`, `GET/PUT/DELETE /api/customers/:id`, `POST /api/agent {message, history}`.
 
