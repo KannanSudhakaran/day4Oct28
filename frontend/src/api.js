@@ -33,7 +33,23 @@ async function request(path, options = {}) {
   return body;
 }
 
+// Binary download: bypasses request() (which parses JSON) but keeps the token and 401 handling.
+async function exportCustomers(name) {
+  const token = getToken();
+  const res = await fetch(`${BASE}/api/customers/export${name ? `?name=${encodeURIComponent(name)}` : ''}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (res.status === 401) { clearToken(); onUnauthorized(); }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `Export failed (${res.status})`);
+  }
+  const match = /filename="?([^"]+)"?/.exec(res.headers.get('Content-Disposition') || '');
+  return { blob: await res.blob(), filename: match ? match[1] : 'customers.xlsx' };
+}
+
 export const api = {
+  exportCustomers,
   register: (u) => request('/api/auth/register', { method: 'POST', body: JSON.stringify(u) }),
   login: (u) => request('/api/auth/login', { method: 'POST', body: JSON.stringify(u) }),
   adminLogin: (u) => request('/api/admin/login', { method: 'POST', body: JSON.stringify(u) }),
