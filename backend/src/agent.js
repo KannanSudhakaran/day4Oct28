@@ -67,17 +67,18 @@ const tools = [
   },
 ];
 
-async function runTool(name, input) {
+// userId comes from the verified token, never from model output; every call is owner-scoped.
+async function runTool(name, input, userId) {
   switch (name) {
-    case 'get_all_customers': return customers.getAll();
-    case 'get_customer_by_name': return customers.searchByName(input.name);
-    case 'get_customer_by_id': return (await customers.getById(input.customer_id)) ?? { error: 'Not found' };
-    case 'add_customer': return customers.create(input);
+    case 'get_all_customers': return customers.getAll(userId);
+    case 'get_customer_by_name': return customers.searchByName(userId, input.name);
+    case 'get_customer_by_id': return (await customers.getById(userId, input.customer_id)) ?? { error: 'Not found' };
+    case 'add_customer': return customers.create(userId, input);
     case 'update_customer': {
       const { customer_id, ...fields } = input;
-      return (await customers.update(customer_id, fields)) ?? { error: 'Not found' };
+      return (await customers.update(userId, customer_id, fields)) ?? { error: 'Not found' };
     }
-    case 'delete_customer': return (await customers.remove(input.customer_id)) ?? { error: 'Not found' };
+    case 'delete_customer': return (await customers.remove(userId, input.customer_id)) ?? { error: 'Not found' };
     default: return { error: `Unknown tool ${name}` };
   }
 }
@@ -85,9 +86,10 @@ async function runTool(name, input) {
 const SYSTEM =
   'You are a helpful assistant for a customer management app. Use the provided tools to read and ' +
   'modify customer data; never invent data. Customer fields: customer_id, name, email, phone, created_at. ' +
+  "You only have access to the currently logged-in user's customers; other customers do not exist for you. " +
   'Answer concisely and format lists clearly.';
 
-async function chat(message, history = []) {
+async function chat(message, history = [], userId) {
   if (!process.env.ANTHROPIC_API_KEY) {
     const err = new Error('ANTHROPIC_API_KEY is not set on the server');
     err.status = 503;
@@ -116,7 +118,7 @@ async function chat(message, history = []) {
     for (const block of res.content.filter((b) => b.type === 'tool_use')) {
       let output;
       try {
-        output = await runTool(block.name, block.input);
+        output = await runTool(block.name, block.input, userId);
         if (WRITE_TOOLS.has(block.name)) dataChanged = true;
       } catch (e) {
         output = { error: e.message };
