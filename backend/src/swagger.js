@@ -176,6 +176,22 @@ module.exports = {
         responses: { 201: ok(customer, 'Created'), 400: { description: 'Validation error' }, 401: unauthorized, 403: forbiddenSales },
       },
     },
+    '/api/customers/export': {
+      get: {
+        tags: ['Customers'], security: secured,
+        summary: 'Export my customers to Excel',
+        description: 'Downloads an .xlsx file containing only the logged-in user\'s customers. Optional name filter, as in the list.',
+        parameters: [{ name: 'name', in: 'query', required: false, schema: { type: 'string' }, description: 'Only customers whose name contains this text' }],
+        responses: {
+          200: {
+            description: 'Excel workbook (customers-YYYY-MM-DD.xlsx)',
+            content: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': { schema: { type: 'string', format: 'binary' } } },
+          },
+          401: unauthorized,
+          403: forbiddenSales,
+        },
+      },
+    },
     '/api/customers/{id}': {
       get: {
         tags: ['Customers'], security: secured, summary: 'Get one of my customers by id', parameters: [idParam],
