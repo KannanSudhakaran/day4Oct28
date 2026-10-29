@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const users = require('./userService');
 
 const secret = () => {
   if (!process.env.JWT_SECRET) throw Object.assign(new Error('JWT_SECRET is not set on the server'), { status: 500 });
@@ -21,4 +22,19 @@ function requireAuth(req, res, next) {
   }
 }
 
-module.exports = { signToken, requireAuth };
+const requireSales = (req, res, next) =>
+  req.user.role === 'sales' ? next() : res.status(403).json({ error: 'Sales access required' });
+
+// Token role is checked first, then the database, so deleted/demoted admins lose access immediately.
+async function requireAdmin(req, res, next) {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
+  try {
+    const u = await users.getById(req.user.user_id);
+    if (!u || u.role !== 'admin') return res.status(401).json({ error: 'User no longer exists' });
+    next();
+  } catch (e) {
+    next(e);
+  }
+}
+
+module.exports = { signToken, requireAuth, requireSales, requireAdmin };
