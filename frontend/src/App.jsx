@@ -1,11 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Customers from './Customers';
 import Chat from './Chat';
-import { SWAGGER_URL } from './api';
+import Auth from './Auth';
+import { api, getToken, clearToken, setUnauthorizedHandler, SWAGGER_URL } from './api';
 import './App.css';
 
 export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [user, setUser] = useState(null);
+  const [checking, setChecking] = useState(() => !!getToken());
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => setUser(null));
+    if (getToken()) {
+      api.me().then(setUser).catch(() => {}).finally(() => setChecking(false));
+    }
+  }, []);
+
+  const logout = () => { clearToken(); setUser(null); };
+
+  if (checking) return null;
+  if (!user) return <Auth onAuthed={setUser} />;
 
   return (
     <div className="app">
@@ -14,10 +29,13 @@ export default function App() {
           <span className="logo">C</span>
           <div>
             <strong>Customer Hub</strong>
-            <span className="muted"> · CRM dashboard</span>
+            <span className="muted"> · {user.name}</span>
           </div>
         </div>
-        <a className="btn ghost small" href={SWAGGER_URL} target="_blank" rel="noreferrer">API docs ↗</a>
+        <div>
+          <a className="btn ghost small" href={SWAGGER_URL} target="_blank" rel="noreferrer">API docs ↗</a>{' '}
+          <button className="btn ghost small" onClick={logout}>Log out</button>
+        </div>
       </header>
       <main className="layout">
         <Customers refreshKey={refreshKey} />
