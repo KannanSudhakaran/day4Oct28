@@ -25,7 +25,7 @@ async function request(path, options = {}) {
   });
   const body = await res.json().catch(() => ({}));
   // 401 on login means bad credentials; elsewhere it means the session is gone
-  if (res.status === 401 && path !== '/api/auth/login') {
+  if (res.status === 401 && path !== '/api/auth/login' && path !== '/api/admin/login') {
     clearToken();
     onUnauthorized();
   }
@@ -36,6 +36,8 @@ async function request(path, options = {}) {
 export const api = {
   register: (u) => request('/api/auth/register', { method: 'POST', body: JSON.stringify(u) }),
   login: (u) => request('/api/auth/login', { method: 'POST', body: JSON.stringify(u) }),
+  adminLogin: (u) => request('/api/admin/login', { method: 'POST', body: JSON.stringify(u) }),
+  adminUsers: () => request('/api/admin/users'),
   me: () => request('/api/auth/me'),
   list: () => request('/api/customers'),
   create: (c) => request('/api/customers', { method: 'POST', body: JSON.stringify(c) }),
